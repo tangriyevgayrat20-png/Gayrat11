@@ -15,6 +15,10 @@ export async function generateMetadata({ params }) {
     description: post.description,
   }
 }
+
+
+
+
  
 
 async function SinglePage({ params }) {
