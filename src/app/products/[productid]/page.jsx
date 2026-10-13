@@ -1,32 +1,42 @@
+import { Suspense } from 'react'
+import { cacheLife } from 'next/cache'
+import { notFound } from 'next/navigation'
 import SinglePageCard from '../../../components/SinglePageCard'
-import React from 'react'
+
+// Keshlangan fetch: metadata ham, sahifa ham shuni ishlatadi
+async function getProduct(productid) {
+  "use cache"
+  cacheLife({ revalidate: 3600, expire: 3600 })
+
+  const res = await fetch(`https://api.escuelajs.co/api/v1/products/${productid}`)
+  if (!res.ok) return null
+  return res.json()
+}
+
+// Build vaqtida ma'lum bo'ladigan param'lar
+export async function generateStaticParams() {
+  const res = await fetch("https://api.escuelajs.co/api/v1/products?limit=10&offset=1")
+  const products = await res.json()
+  return products.map((el) => ({ productid: String(el.id) }))
+}
 
 export async function generateMetadata({ params }) {
-  const {productid} = await params;
- 
-  const post = await fetch(`https://api.escuelajs.co/api/v1/products/${productid}`).then((res) =>
-    res.json()
-  )
- 
+  const { productid } = await params
+  const post = await getProduct(productid)
+
+  if (!post) return { title: "Mahsulot topilmadi" }
+
   return {
     title: post.title,
-
-    
     description: post.description,
   }
 }
 
+async function ProductContent({ params }) {
+  const { productid } = await params
+  const data = await getProduct(productid)
 
-
-
- 
-
-async function SinglePage({ params }) {
-  const { productid } = await params;
-
-  const res = await fetch(`https://api.escuelajs.co/api/v1/products/${productid}`);
-  const data = await res.json();
-  console.log(data);
+  if (!data) notFound()
 
   return (
     <div className="mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
@@ -35,4 +45,10 @@ async function SinglePage({ params }) {
   )
 }
 
-export default SinglePage
+export default function SinglePage({ params }) {
+  return (
+    <Suspense fallback={<p className="p-8">Yuklanmoqda...</p>}>
+      <ProductContent params={params} />
+    </Suspense>
+  )
+}
